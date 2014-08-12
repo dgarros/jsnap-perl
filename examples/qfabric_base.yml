@@ -1,0 +1,400 @@
+do:
+   check-dg-vm-cpu:     TRUE
+   ver-component-all:   TRUE
+   director-status:     TRUE
+   check-core:          TRUE
+   check-alarms:        TRUE
+   check-fte-links:     TRUE
+   check-fabric-inv:    TRUE
+   check-lacp:          TRUE
+   ## check-fte-links-ext: TRUE
+
+variables:
+    minute:     600
+
+## Verify that all components of the system are running the same version
+ver-component-all:
+    - command: show version component all
+    - iterate: '//package-information[name="jbase"]'
+      tests:
+        - all-same: [ comment ]
+          info:     All Components run the same version
+          err:      [ '%s is running %s', '../host-name', 'comment' ]
+
+## Verify Fabric inventory
+## All node Group connected and configured 
+## All node Devices connected and configured 
+check-fabric-inv:
+    - command: show fabric administration inventory detail
+    
+     ## Node Group
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group'
+      tests:
+        - exists:       [ connected ]
+          info:         'All Node Groups are in connected State'
+          err:          ['Node Group %s is not in connected state', 'node-group-name']
+          
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'All Node Groups are in configured State'
+          err:          ['Node Group %s is not in configured state', 'node-group-name', 'configuration']
+          
+        - greater-than: [ 'connection-time/@junos:seconds', 600]
+          info:         'All Node Groups have been connected for more than 10 mins {{minute}}'
+          err:          ['Node Group %s is connected since %s', 'node-group-name', 'connection-time/@junos:seconds']
+ 
+     ## Node Device
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group/node-group-node-devices/node-group-node-device'
+      tests:
+        - exists:       [ connected ]
+          info:         'All Node Devices are in connected State'
+          err:          ['Node Device %s is not in connected state', 'node-device-name']
+          
+        - exists:       [ 'configuration' ]
+          info:         'All Node Devices are in configured State'
+          err:          ['Node Device %s is not in configured state', 'node-device-name', 'configuration']
+          
+        - greater-than: [ 'connection-time/@junos:seconds', 600]
+          info:         'All Node Devices have been connected for more than 10 mins'
+          err:          ['Node Device %s is connected since %s', 'node-device-name', 'connection-time/@junos:seconds']
+ 
+    ## Interconnect
+    - iterate: '/rpc-reply/sfc-inventory/interconnect-devices/interconnect-device'
+      tests:
+        - exists:       [ connected ]
+          info:         'All Interconnects are in connected State'
+          err:          ['Interconnect %s is not in connected state', 'interconnect-device-name']
+          min:           2
+          
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'All Interconnects are in configured State'
+          err:          ['Interconnect %s is in %s state', 'interconnect-device-name', 'configuration']
+          min:          2
+          
+        - greater-than: [ 'connection-time/@junos:seconds', 600]
+          info:         'All Interconnects have been connected for more than 10 mins'
+          err:          ['Interconnect %s is connected since %s', 'interconnect-device-name', 'connection-time/@junos:seconds']
+ 
+    ## Fabric Manager
+    - iterate: '/rpc-reply/sfc-inventory/fabric-managers/fabric-manager'
+      tests:
+        - exists:       [ connected ]
+          info:         'Fabric Manager is in connected State'
+          err:          ['Fabric Manager %s is not in connected state', 'fabric-manager-name']
+          
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'Fabric Manager is in configured State'
+          err:          ['Fabric Manager %s is in %s state', 'fabric-manager-name', 'configuration']
+          
+        - greater-than: [ 'connection-time/@junos:seconds', 600]
+          info:         'Fabric Manager has been connected for more than 10 mins'
+          err:          ['Fabric Manager %s is connected since %s', 'fabric-manager-name', 'connection-time/@junos:seconds']
+ 
+    ## Fabric Control
+    - iterate: '/rpc-reply/sfc-inventory/fabric-controls/fabric-control'
+      tests:   
+        - exists:       [ connected ]
+          info:         'Both Fabric Control are in connected State'
+          err:          ['Fabric Control %s is not in connected state', 'fabric-control-name']
+          min:          2
+          max:          2
+      
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'Both Fabric Control are in configured State'
+          err:          ['Fabric Control %s is in %s state', 'fabric-control-name', 'configuration']
+          min:          2
+          max:          2
+          
+        - greater-than: [ 'connection-time/@junos:seconds', 600]
+          info:         'All Fabric Control have been connected for more than 10 mins'
+          err:          ['Fabric Control %s is connected since %s', 'fabric-control-name', 'connection-time/@junos:seconds']
+          min:          2
+          max:          2
+    
+    
+    ## For each Node Group
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group[connected]/node-group-name'
+      with-each:
+        - command: 'show chassis routing-engine node-group %s' 
+        - iterate: '/rpc-reply/route-engine-information/route-engine'
+          tests:      
+            - less-than:    [ 'load-average-one', '0.6' ]
+              info:         'Average CPU for last 1 min is inf at 60%'
+              err:          [ '%s (%s) Average CPU for last 1 min is at %s %', 'slot', 'mastership-state', 'load-average-one' ]
+
+            - less-than:    [ 'load-average-five', '0.4' ]
+              info:         'Average CPU for last 5 min is inf at 40%'
+              err:          [ '%s (%s) Average CPU for last 1 min is at %s %', 'slot', 'mastership-state', 'load-average-five' ]
+              
+            - greater-than: [ 'up-time/@seconds', '600' ]
+              info:         'RE has been Up for more than 10 mins'
+              err:          [ '%s (%s) is UP since %s sec', 'slot', 'mastership-state', 'up-time/@seconds' ]
+
+            - greater-than: [ 'cpu-idle', '70' ]
+              info:         'Average CPU idle is higher than 70%'
+              err:          [ '%s (%s) Average CPU idle is at %s %', 'slot', 'mastership-state', 'cpu-idle' ]
+
+    ## For each Node Device
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group/node-group-node-devices/node-group-node-device[connected]/node-device-name'
+      with-each:
+        - command: 'show chassis fpc node-device %s'
+        - iterate: '/rpc-reply/fpc-information/fpc'
+          tests:      
+            - is-equal:     [ 'state', 'Online' ]
+              info:         'FPC is Online'
+              err:          [ 'FPC is in state %s', 'state']
+
+            - less-than:    [ 'cpu-total', '40' ]
+              info:         'FPC CPU is inf at 40%'
+              err:          [ 'FPC CPU is at %s %', 'cpu-total' ]
+              
+            - less-than:    [ 'memory-buffer-utilization', '600' ]
+              info:         'FPC Memory utilization is inf at 60%'
+              err:          [ 'FPC Memory utilization is at %s %', 'memory-buffer-utilization' ]
+             
+## Check DGs VM CPU utilization
+# -- Report all VMS using more than 30% of CPU
+check-dg-vm-cpu:
+    - command: show fabric administration inventory infrastructure detail
+    - iterate: '//routing-engine'
+      tests:
+        - less-than: [ 'cpu-use-percent', '30' ]
+          info:     'All DG VM use less than 30% of CPU'
+          err:      [ 'VM %s on %s is using %s', 'host-name', '../name', 'cpu-use-percent' ]
+
+## Check Director devices status
+# -- All services are online
+# -- All processes are Online except SNMP on Backup
+# -- All disks are online and not more than 85% full
+# -- ALl interfaces are UP
+# -- 
+director-status:
+    - command: show fabric administration inventory director-group status
+    - iterate: '//cluster-managed-services-status/entry'
+      tests:
+        - is-equal: [ status, online ]
+          info:     'All DGs managed Service are online'
+          err:      [ 'Service %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status' ]
+
+    - iterate: '//member-details[role="master"]/director-group-processes-status/entry'
+      tests:  
+        - is-equal: [ status, online ]
+          info:     'All Master DG processes are online'
+          err:      [ 'Process %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status']
+          
+    - iterate: '//member-details[role="backup"]/director-group-processes-status/entry[not(name="SNMP Process")]'
+      tests:  
+        - is-equal: [ status, online ]
+          info:     'All Backup DG processes are online'
+          err:      [ 'Process %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status']
+                   
+    - iterate: '//hard-disk-status/partition-entry[(contains(partition-name, "Physical"))]'
+      tests:  
+        - is-equal: [ partition-status , online ]
+          info:     'All DGs disks are online'
+          err:      [ 'Disks %s on %s(%s) is %s', 'partition-name', '../../name', '../../role', 'partition-status' ]
+    
+    - iterate: '//interface-link-status/entry'
+      tests:
+        - is-equal: [ status , up ]
+          info:     'All DG Interfaces are UP'
+          err:      [ 'Interface %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status' ]
+          
+    - iterate: '//hard-disk-usage-entry'
+      tests:  
+        - less-than: [ used-percent , 85]
+          info:      'All DG Disk partitions are less than 85% used'
+          err:       [ 'Mount %s on %s(%s) is used at %s', 'mounted-on', '../../name', '../../role', 'used-percent' ]
+
+#          
+## Will report all alarms with Level MAJOR or WARNING
+#  -- except ALARMS related to PEM and  Fan Tray 
+check-alarms:
+    - command: show chassis alarms
+    - iterate: '//alarm-detail[ not( (contains(alarm-description,"PEM")) or (contains(alarm-description,"Fan Tray")) )]'
+      tests:
+        - not-in:   [ alarm-class, Major, Warning ]
+          info:     'No Major or Warning alarms (except PEM / Fan Tray)'
+          err:      [ '%s : Alarm %s : %s', '../../re-name', 'alarm-class', 'alarm-description' ]
+          min:      0
+
+## Chech for coredumps but exclude file containing "pblogs" or "Install"         
+check-core:
+    - command: show system core-dumps component all repository core
+    - iterate: '//dre-repository-component-dbgart-entry[ not( contains( dre-repository-component-dbgart-entry-name, "pblogs"))]'
+      tests:      
+        - is-equal: [ dre-repository-component-dbgart-entry-size, 0 ]
+          info:     'No cores found (except pblogs / install)'
+          err:      [ 'Core found generated on : %s for %s', 'dre-repository-component-dbgart-entry-date', 'dre-repository-component-dbgart-entry-name' ]
+          min:      0
+
+#
+## Report interface with LACP enabled that are not in Collecting distributing state 
+check-lacp:
+    - command: show lacp interfaces
+    - iterate: '/rpc-reply/lacp-interface-information-list/lacp-interface-information/lag-lacp-protocol'
+      tests:
+        - is-equal: [ lacp-mux-state, 'Collecting distributing' ]
+          info:     'All LACP interfaces are in Collecting/distributing state'
+          err:      [ 'Interface %s - %s is in state %s', '../lag-lacp-header/aggregate-name', 'name', 'lacp-mux-state' ]
+          min:      0          
+
+          
+          
+#         
+## Will report all FTE links that are not in Status OK with "show chassis fabric connectivity"
+#  -- It will also ensure that all nodes have the same number of Fabric links
+check-fte-links:
+    - command: show chassis fabric connectivity
+    - iterate: '/rpc-reply/chassis-fabric-connectivity-information/chassis-fabric-device-connectivity/chassis-fabric-incoming-links/chassis-fabric-links/link-by-link-information'
+      tests:
+        - is-equal: [ hw-status, 'Ok' ]
+          info:     'All Incoming Fabric links have Status Ok'
+          err:      [ 'Incoming Fabric link between %s <> %s is not Ok', 'src-link', 'dst-link' ]
+    - iterate: '/rpc-reply/chassis-fabric-connectivity-information/chassis-fabric-device-connectivity/chassis-fabric-outgoing-links/chassis-fabric-links/link-by-link-information'
+      tests:
+        - is-equal: [ hw-status, 'Ok' ]
+          info:     'All outgoing Fabric links have Status Ok'
+          err:      [ 'Outgoing Fabric link between %s <> %s is not Ok', 'src-link', 'dst-link' ]
+          
+    ## make sure all nodes have same number of links
+    - iterate: '/rpc-reply/chassis-fabric-connectivity-information/chassis-fabric-device-connectivity[ (contains(chassis-type,"qfx3500")) or (contains(chassis-type,"qfx3600")) or (contains(chassis-type,"qfx5100"))]'
+      tests:
+        - same-nbr: [ 'chassis-fabric-incoming-links/chassis-fabric-links/link-by-link-information' ]
+          info:     'All Nodes have the same number of incoming Fabric links'
+          err:      [ 'Node %s doesn t have the same number of incoming Fabric links than other nodes', 'device-id' ]
+          
+        - same-nbr: [ 'chassis-fabric-outgoing-links/chassis-fabric-links/link-by-link-information' ]
+          info:     'All Nodes have the same number of outgoing Fabric links'
+          err:      [ 'Node %s doesn t have the same number of outgoing Fabric links than other nodes', 'device-id' ]
+
+#
+## All Fabric links with duplex defined are in Full Duplex mode
+## All Fabric links are UP for more than 10 min 
+## Lots of counters check on Fabric interfaces
+# -- ERROR, DROPS, RUNTS, CRC, RESOURCES etc .. 
+check-fte-links-ext:   
+    - command: show interfaces fabric extensive
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and duplex]'
+      tests:
+        - is-equal: [ 'duplex', 'Full-Duplex' ]
+          info:     'All Fabric links with duplex defined are in Full Duplex mode'
+          err:      [ 'Fabric link %s is not in mode %s', 'name', 'duplex' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and interface-flapped and interface-flapped/@seconds != "0"]'
+      tests:
+        - greater-than: [ 'interface-flapped/@seconds', '600' ]
+          info:         'All Fabric links are UP for more than 10 min'
+          err:          [ 'Fabric link %s is Up since %s seconds', 'name', 'interface-flapped/@seconds' ]
+          
+    ## INPUT / OUTPUT ERRORS
+    - iterate:      '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-errors', '0' ]
+          info:     'All Fabric links don''t have input error'
+          err:      [ 'Fabric link %s has %s input errors', 'name', 'input-error-list/input-errors' ]
+
+    - iterate:      '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-errors', '0' ]
+          info:     'All Fabric links don''t have output error'
+          err:      [ 'Fabric link %s has %s output errors', 'name', 'output-error-list/output-errors' ]
+
+    ## INPUT / OUTPUT DROPS
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-drops]'
+      tests:
+        - is-equal: [ 'input-error-list/input-drops', '0' ]
+          info:     'All Fabric links don''t have input drops'
+          err:      [ 'Fabric link %s has %s input drops', 'name', 'input-error-list/input-drops' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-drops]'
+      tests:
+        - is_equal: [ 'output-error-list/output-drops', '0' ]
+          info:     'All Fabric links don''t have output drops'
+          err:      [ 'Fabric link %s has %s output drops', 'name', 'output-error-list/output-drops' ]
+
+ 
+    ## INPUT / OUTPUT RESOURCES ERROR 
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-resource-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-resource-errors', '0' ]
+          info:     'All Fabric links don''t have input resource error'
+          err:      [ 'Fabric link %s has %s input resource error', 'name', 'input-error-list/input-resource-errors' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-resource-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-resource-errors', '0' ]
+          info:     'All Fabric links don''t have output resource error'
+          err:      [ 'Fabric link %s has %s output resource error', 'name', 'output-error-list/output-resource-errors' ]
+          
+    ##  Other OUTPUT checks
+    - iterate:  '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/carrier-transitions]'
+      tests:
+        - less-than:    [ 'output-error-list/carrier-transitions', '10' ]
+          info:         'All Fabric links have less than 10 output carrier transition'
+          err:          [ 'Fabric link %s has %s output carrier transitions', 'name', 'output-error-list/carrier-transitions' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-collisions]'
+      tests:
+        - is-equal: [ 'output-error-list/output-collisions', '0' ]
+          info:     'All Fabric links don''t have output collision'
+          err:      [ 'Fabric link %s has %s output carrier transitions', 'name', 'output-error-list/output-collisions' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/mtu-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/mtu-errors', '0' ]
+          info:     'All Fabric links don''t have mtu error'
+          err:      [ 'Fabric link %s has %s output mtu errors', 'name', 'output-error-list/mtu-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/hs-link-crc-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/hs-link-crc-errors', '0' ]
+          info:     'All Fabric links don''t have crc error'
+          err:      [ 'Fabric link %s has %s output crc error', 'name', 'output-error-list/hs-link-crc-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-fifo-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-fifo-errors', '0' ]
+          info:     'All Fabric links don''t have fifo error'
+          err:      [ 'Fabric link %s has %s output fifo errors', 'name', 'output-error-list/output-fifo-errors' ]
+                        
+    ##  Other INPUT checks
+    - iterate:  '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/framing-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/framing-errors', '0' ]
+          info:     'All Fabric links don''t have input framing error'
+          err:      [ 'Fabric link %s has %s input framing errors', 'name', 'input-error-list/framing-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-runts]'
+      tests:
+        - is-equal: [ 'input-error-list/input-runts', '0' ]
+          info:     'All Fabric links don''t have input runts error'
+          err:      [ 'Fabric link %s has %s input runts errors', 'name', 'input-error-list/input-runts' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-discards]'
+      tests:
+        - is-equal: [ 'input-error-list/input-discards', '0' ]
+          info:     'All Fabric links don''t have input discard error'
+          err:      [ 'Fabric link %s has %s input discard errors', 'name', 'input-error-list/input-discards' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l3-incompletes]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l3-incompletes', '0' ]
+          info:     'All Fabric links don''t have input L3 incomplete error'
+          err:      [ 'Fabric link %s has %s input L3 incomplete errors', 'name', 'input-error-list/input-l3-incompletes' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l2-channel-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l2-channel-errors', '0' ]
+          info:     'All Fabric links don''t have input L2 Channel Error'
+          err:      [ 'Fabric link %s has %s input L2 Channel Errors', 'name', 'input-error-list/input-l2-channel-errors' ]
+                        
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l2-mismatch-timeouts]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l2-mismatch-timeouts', '0' ]
+          info:     'All Fabric links don''t haveinput L2 mismatch timeout'
+          err:      [ 'Fabric link %s has %s input L2 mismatch timeout', 'name', 'input-error-list/input-l2-mismatch-timeouts' ]
+               
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-fifo-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-fifo-errors', '0' ]
+          info:     'All Fabric links don''t have input FIFO error'
+          err:      [ 'Fabric link %s has %s input FIFO errors', 'name', 'input-error-list/input-fifo-errors' ]
+
+
