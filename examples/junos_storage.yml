@@ -1,0 +1,11 @@
+##          
+## Will report Partition that are over 80% used
+## 
+
+check-storage:
+    - command: show system storage
+    - iterate: '//system-storage-information/filesystem[ not ( contains( mounted-on,"/packages") or contains( mounted-on,"/dev") or contains( mounted-on,"/proc") ) ]'
+      tests:
+        - less-than:    [ 'used-percent', 80 ]
+          info:         'All file system are under 80% used'
+          err:          [ '%s is used at %s% (%s/%s)', 'mounted-on', 'used-percent', 'used-blocks/@format', 'total-blocks/@format' ]

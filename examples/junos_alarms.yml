@@ -1,0 +1,11 @@
+##          
+## Will report all alarms with Level MAJOR or WARNING
+## 
+
+check-alarms:
+    - command: show chassis alarms
+    - iterate: '//alarm-detail'
+      tests:
+        - not-in:   [ alarm-class, Major, Warning ]
+          info:     'No Major or Warning alarms'
+          err:      [ '%s : Alarm %s : %s', '../../re-name', 'alarm-class', 'alarm-description' ]

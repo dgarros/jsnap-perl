@@ -1,0 +1,11 @@
+## 
+## Report interface with LACP enabled that are not in Collecting/Distributing state 
+##
+ 
+check-lacp:
+    - command: show lacp interfaces
+    - iterate: '/rpc-reply/lacp-interface-information-list/lacp-interface-information/lag-lacp-protocol'
+      tests:
+        - is-equal: [ lacp-mux-state, 'Collecting distributing' ]
+          info:     'All LACP interfaces are in Collecting/distributing state'
+          err:      [ 'Interface %s - %s is in state %s', '../lag-lacp-header/aggregate-name', 'name', 'lacp-mux-state' ]

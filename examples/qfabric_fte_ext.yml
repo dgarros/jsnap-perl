@@ -11,7 +11,7 @@ check-int-ext:
       tests:
         - is-equal: [ 'oper-status', 'up' ]
           info:     'All Interfaces with Admin UP and Eth-Switch are UP'
-          err:      [ 'Interface %s is not UP/UP', 'name', ]
+          err:      [ 'Interface %s is not UP/UP', 'name' ]
     # - iterate: '/rpc-reply/interface-information/physical-interface[admin-status="up" and logical-interface/address-family/address-family-name="eth-switch"]'
       # tests:
         # - greater-than: [ 'interface-flapped/@seconds', '600' ]
