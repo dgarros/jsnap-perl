@@ -11,6 +11,7 @@ use XML::XPath::XMLParser;
 use YAML::Syck qw(LoadFile DumpFile);
 use constant { TRUE => 1, FALSE => 0 };
 
+our $dir    = "$ENV{HOME}/.jsnap";
 
 sub execute {
     my %arg  = ( 
@@ -45,6 +46,7 @@ sub execute {
 }
 
 #### 
+
 sub execute_yml_test {
     my %arg  = ( test => undef, @_ ); 
           
@@ -201,13 +203,11 @@ sub execute_yml_to_screen {
     
     ## For all Section
     # -- Defined in DO section and with value ea TRUE
-    foreach my $section ( keys %{$arg{conf}} ) {      
+    foreach my $section ( keys %{$arg{conf}} ) {
         next if ( $section eq 'do' );
         next if ( $section eq 'variables' );
-        next if ( not defined $arg{conf}->{do}{$section} );
-        next if ( $arg{conf}->{do}{$section} !~ /true/i );
-        
-        ## print " == Section $section == \n";
+        next if ( defined $arg{conf}->{do} and ( not defined $arg{conf}->{do}{$section} ) );
+        next if ( defined $arg{conf}->{do} and ( $arg{conf}->{do}{$section} !~ /true/i ) );
         
         ## Find the command for this section
         my $command = JSNAP::find_command_in_section( section => $arg{conf}->{$section} );
@@ -274,13 +274,11 @@ sub element_exists {
     ## Initiate the structure that will be returned
     my %results = init_result_hash();
     
-    
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) {
-    
-        my $ret = $item->find( $arg{'element'} ); 
+        my $ret = clean_string( $item->find( $arg{'element'} ) ); 
         
         ## if not present, than collect all output information
-        if ( ! $ret ){
+        unless ( $ret ){
             push @{$results{'failed'}}, collect_output_on_fail( index => $results{'nbr_match'}, item => $item, output => $arg{'output'} );
             $results{'nbr_failed'}++;
         }
@@ -321,9 +319,8 @@ sub not_exists {
     my %results = init_result_hash();
     
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) {
-    
-        my $ret = $item->find( $arg{'element'} ); 
-        
+        my $ret = clean_string( $item->find( $arg{'element'} ) ); 
+
         ## if present, than collect all output information
         if ( $ret ){        
             push @{$results{'failed'}}, collect_output_on_fail( index => $results{'nbr_match'}, item => $item, output => $arg{'output'} );
@@ -371,9 +368,8 @@ sub is_equal {
     my %results = init_result_hash();  
 
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) {
-
-        my $temp    = $item->findvalue( $arg{'element'} ) ;
-        
+        my $temp    = clean_string( $item->findvalue( $arg{'element'} ) );
+      
         my $do_fail = undef;
         
         if ( defined get_numeric_part( $temp ) ) 
@@ -432,14 +428,13 @@ sub not_equal {
     #From the obtained child node XML element get the value(either its a numeric or string) and check the condition is-equal, not-equal
 
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) {
+        my $temp    = clean_string( $item->findvalue( $arg{'element'} ) );
 
-        my $temp    = $item->findvalue( $arg{'element'}) ;
         my $do_fail = undef;
         
         if ( defined get_numeric_part( $temp ) ) {
             ## input value is a numeric, doing numeric check
             $do_fail = 1    if ( get_numeric_part($temp) == get_numeric_part($arg{'value'}[0]) );
-
         }
         else {
             ## doing string check
@@ -494,8 +489,8 @@ sub contains {
     my $ret = "";
       
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) { 
-        $ret = $item->find( $arg{'element'} )->to_literal; 
-                
+        $ret    = clean_string( $item->findvalue( $arg{'element'} ) ); 
+        
         if ($ret !~ /$arg{'value'}/) {
             push @{$results{'failed'}}, collect_output_on_fail( index => $results{'nbr_match'}, item => $item, output => $arg{'output'} );
             $results{'nbr_failed'}++;
@@ -538,7 +533,7 @@ sub is_in {
     my $arrlen = @valuearray;
          
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) {
-        my $ret = $item->find( $arg{'element'} )->to_literal; 
+        my $ret = clean_string( $item->findvalue( $arg{'element'} ) ); 
         
         my $do_match = undef; 
         foreach my $value ( @{$arg{'value'}} ) {
@@ -583,11 +578,9 @@ sub not_in {
     my %results = init_result_hash();
    
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) {
-         
-        my $ret = $item->find( $arg{'element'} )->to_literal;
-
-        foreach my $value ( @{$arg{'value'}} ) {
+        my $ret = clean_string( $item->findvalue( $arg{'element'} ) );
         
+        foreach my $value ( @{$arg{'value'}} ) {
             next if( $ret ne $value );
         
             ## If Ret is equal
@@ -613,8 +606,8 @@ sub in_range {
                 element     => undef,   ## mandatory, XML element to test
                 value       => undef,   ## optional
                 output      => [],      ## optional
-                startrange  => undef, ##Mandatory
-                endrange    => undef, ##Mandatory
+                startrange  => undef,   ## Mandatory
+                endrange    => undef,   ## Mandatory
                 min         => 1,       ## optional, define a minimum number of results expected, will failed if not match
                 max         => undef,   ## optional, define a maximum number of results expected, will failed if exceed
                 @_ );
@@ -639,8 +632,7 @@ sub in_range {
     my $nodeset = $xp->find($arg{'iterate_on'}); 
   
     foreach my $item ($nodeset->get_nodelist) {
-  
-        my $value   = $item->find( $arg{'element'} )->string_value;
+        my $value   = clean_string( $item->findvalue( $arg{'element'} ) );
         my $number  = get_numeric_part( $value );
         
         ## Check if value is defined and if value has a number
@@ -693,7 +685,7 @@ sub not_in_range {
     
     foreach my $item ($nodeset->get_nodelist) {
   
-        my $value   = $item->find( $arg{'element'} )->string_value;
+        my $value   = clean_string( $item->findvalue( $arg{'element'} ) );
         my $number  = get_numeric_part( $value );
         
         ## Check if value is defined and if value has a number
@@ -722,7 +714,7 @@ sub greater_than {
             element     => undef,   ## mandatory, XML element to test
             value       => undef,   ## mandatory
             output      => [],      ## optional, String or Array of values to pass as an output if it failed
-            min         => 1,   ## optional, define a minimum number of results expected, will failed if not match
+            min         => 1,       ## optional, define a minimum number of results expected, will failed if not match
             max         => undef,   ## optional, define a maximum number of results expected, will failed if exceed
             @_ );
 
@@ -745,7 +737,7 @@ sub greater_than {
     my $nodeset = $xp->find($arg{'iterate_on'}); 
 
     foreach my $item ($nodeset->get_nodelist) {  
-        my $value   = $item->find( $arg{'element'} )->string_value;
+        my $value   = clean_string( $item->findvalue( $arg{'element'} ) );
         my $number  = get_numeric_part( $value );
         
         ## Check if value is defined and if value has a number
@@ -772,11 +764,11 @@ sub less_than {
             element     => undef,   ## mandatory, XML element to test
             value       => [],      ## mandatory
             output      => [],      ## optional, String or Array of values to pass as an output if it failed
-            min         => 1,   ## optional, define a minimum number of results expected, will failed if not match
+            min         => 1,       ## optional, define a minimum number of results expected, will failed if not match
             max         => undef,   ## optional, define a maximum number of results expected, will failed if exceed
             @_ );
 
-     ## make sure that all mandatory parameter are present
+    ## make sure that all mandatory parameter are present
     die "JSNAP less_than: Mandatory parameter 'xml' is missing"                 if ( not defined $arg{'xml'} );
     die "JSNAP less_than: Mandatory parameter 'iterate_on' is missing"          if ( not defined $arg{'iterate_on'} );
     die "JSNAP less_than: Mandatory parameter 'element' is missing"             if ( not defined $arg{'element'} );
@@ -787,18 +779,17 @@ sub less_than {
     $arg{'value'} = get_numeric_part($arg{'value'}[0]);    
     die "JSNAP greater_than: Parameter 'value' must be numeric : $arg{'value'}" if ( not defined $arg{'value'} );
 
-    my $xp = get_xpath_obj_or_die( (caller(0))[3], $arg{'xml'});
+    my $xp = get_xpath_obj_or_die( (caller(0))[3], $arg{'xml'} );
 	
     ## Initiate the structure that will be returned
-    my %results = init_result_hash();
-    
-    my $nodeset = $xp->find($arg{'iterate_on'}); # find all paragraphs
+    my %results = init_result_hash(); 
+   
+    my $nodeset = $xp->find( $arg{'iterate_on'} ); # find all paragraphs
 
-    foreach my $item ($nodeset->get_nodelist) {
-
-        my $value   = $item->findvalue( $arg{'element'} );
+    foreach my $item ( $nodeset->get_nodelist ) {
+        my $value   = clean_string( $item->findvalue( $arg{'element'} ) ) ;
         my $number  = get_numeric_part( $value );
-        
+    
         ## Check if value is defined and if value has a number
         next if ( not defined $number );
 
@@ -821,7 +812,7 @@ sub all_same {
             xml         => undef,       ## mandatory
             iterate_on  => undef,       ## mandatory
             element     => undef,       ## mandatory, XML element to test
-            value       => [],       ## optional, other xml element with value like interface-name=ae19.0
+            value       => [],          ## optional, other xml element with value like interface-name=ae19.0
             output      => [],          ## optional, String or Array of values to pass as an output if it failed
             min         => 1,           ## optional, define a minimum number of results expected, will failed if not match
             max         => undef,       ## optional, define a maximum number of results expected, will failed if exceed
@@ -842,13 +833,12 @@ sub all_same {
     ## If value is defined, use it to defined the base VALUE
     if( scalar @{$arg{'value'}} ) {
         my $base_xpath  = $arg{'iterate_on'}.$arg{'value'}[0].'/'.$arg{'element'};
-        $base_value = $xp->find( $base_xpath )->string_value;
-        $is_numeric = 1 if ( defined get_numeric_part( $base_value ) );
+        $base_value     = clean_string( $xp->findvalue( $base_xpath ) );
+        $is_numeric     = 1 if ( defined get_numeric_part( $base_value ) );
     }
 
     foreach my $item ($xp->findnodes($arg{'iterate_on'})) {
-    
-        my $element = $item->find( $arg{'element'} )->string_value;
+        my $element = clean_string( $item->findvalue( $arg{'element'} ) );
         $results{'nbr_match'}++;
         
         if ( not defined $base_value ) {
@@ -905,8 +895,7 @@ sub same_nbr {
     $nbr_child = $arg{'value'}[0] if ( scalar @{$arg{'value'}} );
     
     foreach my $item ($xp->findnodes( $arg{'iterate_on'} )) {
-    
-        my @entries  = $item->findnodes( $arg{'element'} );    
+        my @entries     = $item->findnodes( $arg{'element'} );    
         my $nbr_entries = scalar @entries;
         
         if ( not defined $nbr_child ) {
@@ -929,8 +918,7 @@ sub same_nbr {
     return ( TRUE,  \%results );
 } 
 
-#### Operator by comparison #### 
-#### Two XML needed          ####
+#### Operator by comparison, Two XML needed #### 
 
 sub list_not_less {
     
@@ -1288,7 +1276,6 @@ sub get_xpath_obj_or_die {
     return $xp;
 }
 
-## Remove everything before and after the XML structure
 sub clean_xml_response {
     my $xml = shift;
     
@@ -1297,8 +1284,22 @@ sub clean_xml_response {
     
     (my $before2, my $after2) = split(/\<rpc-reply/, $xml);
     $xml = '<rpc-reply'.$after2;
-    
+   
     return $xml;
+}
+
+sub clean_string {
+    my $str = shift;
+
+    ## Remove All Carriage return
+    $str =~ s/\r|\n//g;
+   
+    ## Remove Unused Space  Before and After
+    $str =~ s/^\s+//;
+    $str =~ s/\s+$//;
+    
+    return $str;
+
 }
 
 sub collect_output_on_fail {
@@ -1310,29 +1311,32 @@ sub collect_output_on_fail {
     
     ## For each variable name in the output array
     foreach  my $output ( @{ $arg{'output'} } ) {
-        my $value = $arg{'item'}->find( $output );
+        my $value =  $arg{'item'}->find( $output );
         
-        if ( $value ) { push @item_output_info, $value->string_value }
+        if ( $value ) { push @item_output_info, clean_string ( $value->string_value) }
         else {          push @item_output_info, 'Not Found'  }
     }
             
     return \@item_output_info;
 }
 
+
+
 sub get_numeric_part {
     my $number  = shift; 
     
-    return undef if ( not defined $number);
+    return undef if ( not defined $number );
 	return undef if ( $number !~ /^[0-9]+(?:\.[0-9]+)?/ );
-     
-    my ( $first_match )  = $number =~ m/^[0-9]+(?:\.[0-9]+)?/g;
+   
+    my ( $first_match )  = $number =~ m/^[0-9]+(?:\.[0-9]+)?/sg;
+    
     return $first_match ;
 }
 
 sub get_numeric_part_delta {
     my $number  = shift; 
     
-    return undef if ( not defined $number);
+    return undef if ( not defined $number );
 	     
     my ( $first_match )  = $number =~ m/(\d+)/;
 	#print $first_match;
@@ -1340,8 +1344,8 @@ sub get_numeric_part_delta {
     return $first_match ;
 }
 
+#############################  
 
-## 
 sub load_conf_file {
     my $conf_file   = shift;
     
@@ -1358,8 +1362,8 @@ sub get_list_commands {
     ## For each section, except 'do'
     foreach my $section ( keys %{$arg{conf}} ) {      
         next if ( $section eq 'do' );
-        next if ( not defined $arg{conf}->{do}{$section} );
-        next if ( $arg{conf}->{do}{$section} !~ /true/i );
+        next if ( defined $arg{conf}->{do} and ( not defined $arg{conf}->{do}{$section} ) );
+        next if ( defined $arg{conf}->{do} and ( $arg{conf}->{do}{$section} !~ /true/i ) );
         
         ## Collect command for each section
         push @commands, JSNAP::find_command_in_section( section => $arg{conf}->{$section} );
@@ -1379,8 +1383,8 @@ sub get_list_commands_with_each {
     ## For each section, except 'do' and chech if the section is set as TRUE in 'do'
     foreach my $section ( keys %{$arg{conf}} ) {      
         next if ( $section eq 'do' );
-        next if ( not defined $arg{conf}->{do}{$section} );
-        next if ( $arg{conf}->{do}{$section} !~ /true/i );
+        next if ( defined $arg{conf}->{do} and ( not defined $arg{conf}->{do}{$section} ) );
+        next if ( defined $arg{conf}->{do} and ( $arg{conf}->{do}{$section} !~ /true/i ) );
         
         ## Look for entry that have 'with-each'
         foreach my $entry ( @{$arg{conf}->{$section}} ) {
@@ -1456,34 +1460,98 @@ sub retrieve_commands_remote {
     return \%results;
 }
 
-sub retrive_commands_local {
+sub retrieve_commands_local {
     my %arg     = (
-        directory   => undef,
         target      => undef,
         snapname    => undef,
         commands    => undef, 
         @_ );
         
-    my %results; 
+    my %results;
+
+    foreach my $command ( @{$arg{commands}} ) {
+        ## Do some cleanup on the string
+        my $cmd = cleanup_cmd_name( $command );
+        
+        ## Build the name of the file
+        ## TARGET_JSNAP_CMD
+        my $file_name = $JSNAP::dir.'/'.$arg{target}.'_'.$arg{snapname}.'_'.$cmd.'.xml';
+        
+        ## Check if file exist, if it exist delete it
+        unless ( -f $file_name ){
+            print "WARN | Unable to find local saved result for TARGET:$arg{target}, SNAP:$arg{snapname}, COMMAND:$command SKIPPING ..\n ";
+            next; 
+        }
+        
+        ## Read the file and create a XPATH object
+        my $xml = XML::XPath->new( filename => $file_name );
+        $results{$command} = $xml; 
+    }
     
     return \%results;
 }
 
 sub save_commands_local {
     my %arg     = (
-        directory   => undef,
         target      => undef,
         snapname    => undef,
         results     => undef, 
         @_ );
 
+    ## Get the directory name through CLI opt, Env Var, Default
     
+    
+    ## Check if the Directory exist  
+    ## If not Create it    
+    unless ( -d $JSNAP::dir ) {
+        `mkdir $JSNAP::dir`;
+        print "Directory $JSNAP::dir created\n";
+    }
+    
+    print "Saving: Commands output to $JSNAP::dir .. \n";
+    
+    ## Create One XML File per command
+    foreach ( keys %{$arg{results}} ) {
+        
+        ## Do some cleanup on the string
+        my $cmd = cleanup_cmd_name( $_ );
+        
+        ## Build the name of the file
+        ## TARGET_JSNAP_CMD
+        my $file_name = $JSNAP::dir.'/'.$arg{target}.'_'.$arg{snapname}.'_'.$cmd.'.xml';
+        
+        ## Check if file exist, if it exist delete it
+        if ( -f $file_name ){
+            `rm -f  $file_name`;
+            ## print "WARN | File $file_name already exist, will delete it\n";
+        }
+        
+        ## Write result to file
+        open my $CF, '>', $file_name;
+            print $CF $arg{results}{$_}->{_xml};
+        close $CF;
+        
+        ## print "Command: $cmd output, has been saved in $file_name\n";
+    }    
+        
+        
+    return 1;
+        
+        
+}
+
+sub cleanup_cmd_name {
+    my $cmd = shift; 
+    
+    $cmd    =~ s/\s+/_/g;    ## Replace space by _
+    
+    return $cmd;
 }
 
 sub validate_operator_name {
     my $operator = shift;
     
-    return 'element_exists'     if ( ( $operator eq 'exists' )      or ( $operator eq 'elements_exists' ) );
+    return 'element_exists'     if ( ( $operator eq 'exists' )      or ( $operator eq 'element_exists' ) );
     return 'not_exists'         if ( ( $operator eq 'not-exists' )  or ( $operator eq 'not_exists' ) );
     
     return 'is_equal'           if ( ( $operator eq 'is-equal' )    or ( $operator eq 'is_equal' ) );
