@@ -1,0 +1,37 @@
+## 
+## Check All FPC Status
+## -- All FPC Must be Online
+## -- All PIC Must be Online
+## -- All FPC CPU must be under 80%
+
+## -- All FPC Memory usage must be under 80%
+
+check-fpc:
+    - command: show chassis fpc
+    - iterate: '/rpc-reply/fpc-information/fpc'
+      tests:
+        - is-equal:     [ state, 'Online' ]
+          info:         'All FPC are in State: Online '
+          err:          [ 'FPC %s is in state %s ', 'slot', 'state' ]
+        - less-than:    [ cpu-total, 80 ]
+          info:         'All FPC CPU are under 80%'
+          err:          [ 'FPC %s CPU is running at %s % ', 'slot', 'cpu-total' ]
+        - less-than:    [ memory-buffer-utilization, 80 ]
+          info:         'All FPC Memory usage are under 80%'
+          err:          [ 'FPC %s Memory is using %s % ', 'slot', 'memory-buffer-utilization' ]
+
+check-fpc-uptime:
+    - command: show chassis fpc detail
+    - iterate: '/rpc-reply/fpc-information/fpc'
+      tests:
+        - greater-than: [ up-time/@seconds, 600 ]
+          info:         'All FPC are online for more than 10 min'
+          err:          [ 'FPC %s is UP since %s sec', 'slot', 'up-time/@seconds' ]
+          
+check-fpc-pic:
+    - command: show chassis fpc pic-status
+    - iterate: '/rpc-reply/fpc-information/fpc/pic'
+      tests:
+        - is-equal:     [ pic-state, 'Online' ]
+          info:         'All PIC are in State: Online'
+          err:          [ 'FPC%s PIC%s (%s) is in state %s ', '../slot', 'slot', 'pic-type', 'pic-state' ]

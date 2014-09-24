@@ -898,12 +898,12 @@ sub same_nbr {
         my @entries     = $item->findnodes( $arg{'element'} );    
         my $nbr_entries = scalar @entries;
         
+        $results{'nbr_match'}++;
+        
         if ( not defined $nbr_child ) {
             $nbr_child = $nbr_entries;
             next;
         }
-        
-        $results{'nbr_match'}++;
         
         ## if number don't match, then collect all output information
         if ( $nbr_entries != $nbr_child ) {
@@ -1319,8 +1319,6 @@ sub collect_output_on_fail {
             
     return \@item_output_info;
 }
-
-
 
 sub get_numeric_part {
     my $number  = shift; 

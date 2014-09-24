@@ -25,6 +25,8 @@ my $conf;
 my %snaps;  ## Can be type LOCAL or REMOTE
 my $need_device_access;
 
+my $fname = basename($0); 
+
 GetOptions( 't|target:s'    => \$opt{'target'},
             'l|login:s'     => \$opt{'login'},
             'p|password:s'  => \$opt{'password'},
@@ -174,8 +176,8 @@ print "---\n\n";
 JSNAP::execute_yml_to_screen( snapshot => \%snaps, conf => $conf );
 
 sub usage {
-
-    print "Usage: $0 (--snap|--check|--snapcheck) [NAME1, NAME2] -t target -l login -p password -c config_file [ -ll LOG_LEVEL ]\n\n";
+    print "\n";
+    print "Usage: $fname (--snap|--check|--snapcheck) [NAME1, NAME2] -t target -l login -p password -c config_file [ -ll LOG_LEVEL ]\n\n";
     exit 1;
 
 }
