@@ -54,7 +54,6 @@ die "Both --snapcheck and --check option are selected, only one is supported"   
 ## Assign default value if not defined
 $opt{'log-level'}   = 'INFO'        if ( not defined $opt{'log-level'} );
 $opt{'login'}       = 'root'        if ( not defined $opt{'login'} );  
-$opt{'password'}    = 'Embe1mpls'   if ( not defined $opt{'password'} );
 
 ## Load configuration
 $conf   = JSNAP::load_conf_file( $opt{'conf'} );
