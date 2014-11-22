@@ -1,0 +1,58 @@
+
+## Check PIM adjacencies within VRF on Junos
+
+check-pim-vrf:
+    - command: show pim neighbors instance all
+    
+    - iterate: '/rpc-reply/pim-neighbors-information-all/pim-neighbors-information'
+     
+      tests:
+        - greater-than: ['pim-interface/pim-neighbor/pim-neighbor-uptime/@seconds', 600]
+          info:         'All PIM Neighbor are in UP for more than 10 min'
+          err:          ['%s - PIM Neighbor %s (%s) is UP since %s sec', 'pim-instance', 'neighbor-id', 'interface-name', 'neighbor-up-time/@seconds']
+      
+# <rpc-reply xmlns:junos="http://xml.juniper.net/junos/13.2I0/junos">
+    # <pim-neighbors-information-all xmlns="http://xml.juniper.net/junos/14.1-20141117_x141X53_vjqfd.1/junos-no-dtd">
+        # <pim-neighbors-information junos:style="basic">
+            # <neighbor-option-banner>
+                # <banner-first></banner-first>
+                # <banner-second></banner-second>
+                # <banner-third></banner-third>
+            # </neighbor-option-banner>
+            # <pim-instance>PIM.VRFB-15---qfabric</pim-instance>
+            # <pim-interface>
+                # <pim-neighbor>
+                    # <pim-interface-name>vlan.1679</pim-interface-name>
+                    # <ip-protocol-version>4</ip-protocol-version>
+                    # <protocol-version>2</protocol-version>
+                    # <pim-neighbor-flags>
+                        # <pim-neighbor-hold-time-flag></pim-neighbor-hold-time-flag>
+                        # <pim-neighbor-priority-flag></pim-neighbor-priority-flag>
+                        # <pim-neighbor-lan-prune-flag></pim-neighbor-lan-prune-flag>
+                        # <pim-neighbor-generation-id-flag></pim-neighbor-generation-id-flag>
+                        # <pim-neighbor-t-bit-flag></pim-neighbor-t-bit-flag>
+                    # </pim-neighbor-flags>
+                    # <pim-neighbor-uptime junos:seconds="1582">00:26:22</pim-neighbor-uptime>
+                    # <pim-neighbor-address>32.16.8.237</pim-neighbor-address>
+                # </pim-neighbor>
+            # </pim-interface>
+        # </pim-neighbors-information>
+        # <pim-neighbors-information junos:style="basic">
+            # <pim-instance>PIM.VRFB-7---qfabric</pim-instance>
+            # <pim-interface>
+                # <pim-neighbor>
+                    # <pim-interface-name>vlan.1671</pim-interface-name>
+                    # <ip-protocol-version>4</ip-protocol-version>
+                    # <protocol-version>2</protocol-version>
+                    # <pim-neighbor-flags>
+                        # <pim-neighbor-hold-time-flag></pim-neighbor-hold-time-flag>
+                        # <pim-neighbor-priority-flag></pim-neighbor-priority-flag>
+                        # <pim-neighbor-lan-prune-flag></pim-neighbor-lan-prune-flag>
+                        # <pim-neighbor-generation-id-flag></pim-neighbor-generation-id-flag>
+                        # <pim-neighbor-t-bit-flag></pim-neighbor-t-bit-flag>
+                    # </pim-neighbor-flags>
+                    # <pim-neighbor-uptime junos:seconds="1582">00:26:22</pim-neighbor-uptime>
+                    # <pim-neighbor-address>32.16.8.109</pim-neighbor-address>
+                # </pim-neighbor>
+            # </pim-interface>
+        # </pim-neighbors-information>

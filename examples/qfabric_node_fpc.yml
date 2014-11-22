@@ -1,0 +1,24 @@
+## Verify Fabric inventory
+## All node Group connected and configured 
+## All node Devices connected and configured
+check-fabric-inv:
+    - command: show fabric administration inventory detail
+    
+    ## For each Node Device
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group/node-group-node-devices/node-group-node-device[connected]/node-device-name'
+      with-each:
+        - command: 'show chassis fpc node-device %s'
+        - iterate: '/rpc-reply/fpc-information/fpc'
+          tests:      
+            - is-equal:     [ 'state', 'Online' ]
+              info:         'FPC is Online'
+              err:          [ 'FPC is in state %s', 'state']
+
+            - less-than:    [ 'cpu-total', '80' ]
+              info:         'FPC CPU is inf at 80%'
+              err:          [ 'FPC CPU is at %s %', 'cpu-total' ]
+              
+            - less-than:    [ 'memory-buffer-utilization', '70' ]
+              info:         'FPC Memory utilization is inf at 70%'
+              err:          [ 'FPC Memory utilization is at %s %', 'memory-buffer-utilization' ]
+             

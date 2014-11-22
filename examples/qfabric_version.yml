@@ -1,0 +1,10 @@
+
+## Verify that all components of a Qfabric system are running the same version
+
+ver-component-all:
+    - command: show version component all
+    - iterate: '//package-information[name="jbase"]'
+      tests:
+        - all-same: [ comment ]
+          info:     All Components run the same version
+          err:      [ '%s is running %s', '../host-name', 'comment' ]

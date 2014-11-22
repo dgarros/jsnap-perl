@@ -1,0 +1,27 @@
+
+#         
+## Will report all FTE links that are not in Status OK with "show chassis fabric connectivity"
+#  -- It will also ensure that all nodes have the same number of Fabric links
+check-fte-links:
+    - command: show chassis fabric connectivity
+    - iterate: '/rpc-reply/chassis-fabric-connectivity-information/chassis-fabric-device-connectivity/chassis-fabric-incoming-links/chassis-fabric-links/link-by-link-information'
+      tests:
+        - is-equal: [ hw-status, 'Ok' ]
+          info:     'All Incoming Fabric links have Status Ok'
+          err:      [ 'Incoming Fabric link between %s <> %s is not Ok', 'src-link', 'dst-link' ]
+    - iterate: '/rpc-reply/chassis-fabric-connectivity-information/chassis-fabric-device-connectivity/chassis-fabric-outgoing-links/chassis-fabric-links/link-by-link-information'
+      tests:
+        - is-equal: [ hw-status, 'Ok' ]
+          info:     'All outgoing Fabric links have Status Ok'
+          err:      [ 'Outgoing Fabric link between %s <> %s is not Ok', 'src-link', 'dst-link' ]
+          
+    ## make sure all nodes have same number of links
+    - iterate: '/rpc-reply/chassis-fabric-connectivity-information/chassis-fabric-device-connectivity[ (contains(chassis-type,"qfx3500")) or (contains(chassis-type,"qfx3600")) or (contains(chassis-type,"qfx5100"))]'
+      tests:
+        - same-nbr: [ 'chassis-fabric-incoming-links/chassis-fabric-links/link-by-link-information' ]
+          info:     'All Nodes have the same number of incoming Fabric links'
+          err:      [ 'Node %s doesn t have the same number of incoming Fabric links than other nodes', 'device-id' ]
+          
+        - same-nbr: [ 'chassis-fabric-outgoing-links/chassis-fabric-links/link-by-link-information' ]
+          info:     'All Nodes have the same number of outgoing Fabric links'
+          err:      [ 'Node %s doesn t have the same number of outgoing Fabric links than other nodes', 'device-id' ]

@@ -1,0 +1,34 @@
+
+## Check OSPF adjacencies within VRF on Junos
+# Make sure all neighbor are in FUll state and Are Up for more than 10 min
+
+check-ospf-vrf:
+    - command: show ospf neighbor instance all detail
+    
+    - iterate: '/rpc-reply/ospf-neighbor-information-all/ospf-instance-neighbor/ospf-neighbor'
+      tests:
+        - is-equal:     ['ospf-neighbor-state', 'Full']
+          info:         'All OSPF Neighbor are in Full State'
+          err:          ['%s - OSPF Neighbor %s (%s) is in %s state', '../ospf-instance-name', 'neighbor-id', 'interface-name', 'ospf-neighbor-state']
+ 
+    - iterate: '/rpc-reply/ospf-neighbor-information-all/ospf-instance-neighbor/ospf-neighbor[ospf-neighbor-state="Full"]'
+      tests:
+        - greater-than: ['neighbor-up-time/@seconds', 600]
+          info:         'All OSPF Neighbor  are in UP for more than 10 min'
+          err:          ['%s - OSPF Neighbor %s (%s) is UP since %s sec', '../ospf-instance-name', 'neighbor-id', 'interface-name', 'neighbor-up-time/@seconds']
+      
+    # <ospf-instance-neighbor>
+            # <ospf-instance-name>VRFB-100---qfabric</ospf-instance-name>
+            # <ospf-neighbor>
+                # <neighbor-address>32.16.14.61</neighbor-address>
+                # <interface-name>vlan.1764</interface-name>
+                # <ospf-neighbor-state>Init</ospf-neighbor-state>
+                # <neighbor-id>32.16.14.61</neighbor-id>
+                # <neighbor-priority>128</neighbor-priority>
+                # <activity-timer>88</activity-timer>
+                # <ospf-area>0.0.0.0</ospf-area>
+                # <options>0x12</options>
+                # <dr-address>32.16.14.61</dr-address>
+                # <bdr-address>0.0.0.0</bdr-address>
+            # </ospf-neighbor>
+        # </ospf-instance-neighbor>

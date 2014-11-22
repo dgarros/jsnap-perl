@@ -1,0 +1,76 @@
+
+### Check DGs VM CPU utilization
+# -- Report all VMS using more than 30% of CPU
+check-dg-vm-cpu:
+    - command: show fabric administration inventory infrastructure detail
+    - iterate: '//routing-engine'
+      tests:
+        - less-than: [ 'cpu-use-percent', '30' ]
+          info:     'All DG VM use less than 30% of CPU'
+          err:      [ 'VM %s on %s is using %s', 'host-name', '../director-device-name', 'cpu-use-percent' ]
+    - iterate: '//director-groups/director-device[director-device-name="dg0"]'
+      tests:
+        - exists:   [ 'routing-engine/host-name[../routing-engine-type="Fabric manager"]' ]
+          info:     'DG0 is hosting a Fabric Manager'
+          err:      [ 'No Fabric Manager VM Detected on DG0' ]
+        - exists:   [ 'routing-engine/host-name[../routing-engine-type="Fabric control"]' ]
+          info:     'DG0 is hosting a Fabric control'
+          err:      [ 'No Fabric control VM Detected on DG0' ]
+        - exists:   [ 'routing-engine/host-name[../routing-engine-type="Network Node group"]' ]
+          info:     'DG0 is hosting a Network Node group'
+          err:      [ 'No Network Node group VM Detected on DG0' ]
+    - iterate: '//director-groups/director-device[director-device-name="dg1"]'
+      tests:
+        - exists:   [ 'routing-engine/host-name[../routing-engine-type="Fabric manager"]' ]
+          info:     'DG1 is hosting a Fabric Manager'
+          err:      [ 'No Fabric Manager VM Detected on DG1' ]
+        - exists:   [ 'routing-engine/host-name[../routing-engine-type="Fabric control"]' ]
+          info:     'DG1 is hosting a Fabric control'
+          err:      [ 'No Fabric control VM Detected on DG1' ]
+        - exists:   [ 'routing-engine/host-name[../routing-engine-type="Network Node group"]' ]
+          info:     'DG1 is hosting a Network Node group'
+          err:      [ 'No Network Node group VM Detected on DG1' ]
+          
+## Check Director devices status
+# -- All services are online
+# -- All processes are Online except SNMP on Backup
+# -- All disks are online and not more than 85% full
+# -- ALl interfaces are UP
+# -- 
+director-status:
+    - command: show fabric administration inventory director-group status
+    - iterate: '//cluster-managed-services-status/entry'
+      tests:
+        - is-equal: [ status, online ]
+          info:     'All DGs managed Service are online'
+          err:      [ 'Service %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status' ]
+
+    - iterate: '//member-details[role="master"]/director-group-processes-status/entry'
+      tests:  
+        - is-equal: [ status, online ]
+          info:     'All Master DG processes are online'
+          err:      [ 'Process %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status']
+          
+    - iterate: '//member-details[role="backup"]/director-group-processes-status/entry[not(name="SNMP Process")]'
+      tests:  
+        - is-equal: [ status, online ]
+          info:     'All Backup DG processes are online'
+          err:      [ 'Process %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status']
+                   
+    - iterate: '//hard-disk-status/partition-entry[(contains(partition-name, "Physical"))]'
+      tests:  
+        - is-equal: [ partition-status , online ]
+          info:     'All DGs disks are online'
+          err:      [ 'Disks %s on %s(%s) is %s', 'partition-name', '../../name', '../../role', 'partition-status' ]
+    
+    - iterate: '//interface-link-status/entry'
+      tests:
+        - is-equal: [ status , up ]
+          info:     'All DG Interfaces are UP'
+          err:      [ 'Interface %s on %s(%s) is %s', 'name', '../../name', '../../role', 'status' ]
+          
+    - iterate: '//hard-disk-usage-entry'
+      tests:  
+        - less-than: [ used-percent , 85]
+          info:      'All DG Disk partitions are less than 85% used'
+          err:       [ 'Mount %s on %s(%s) is used at %s', 'mounted-on', '../../name', '../../role', 'used-percent' ]

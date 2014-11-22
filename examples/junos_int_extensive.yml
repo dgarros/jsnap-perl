@@ -1,0 +1,263 @@
+
+check-int-ext:   
+    - command: show interfaces extensive
+    - iterate: '/rpc-reply/interface-information/physical-interface[admin-status="up" and logical-interface/address-family/address-family-name="eth-switch"]'
+      tests:
+        - is-equal: [ 'oper-status', 'up' ]
+          info:     'All Interfaces with Admin UP and Eth-Switch are UP'
+          err:      [ 'Interface %s is not UP/UP', 'name' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[admin-status="up" and logical-interface/address-family/address-family-name="eth-switch"]'
+      tests:
+        - greater-than: [ 'interface-flapped/@seconds', '600' ]
+          info:         'All Interfaces with Adm up and Eth-Switch are UP for more than 10 min'
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[admin-status="up" and logical-interface/address-family/address-family-name and interface-flapped/@seconds != "0" ]'
+      tests:
+        - greater-than: [ 'interface-flapped/@seconds', '600' ]
+          info:         'All Interfaces with family defined are UP for more than 10 min'
+          err:          [ 'Interface %s is Up since %s seconds', 'name', 'interface-flapped/@seconds' ]
+                    
+    ## INPUT / OUTPUT ERRORS
+    - iterate:      '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-errors', '0' ]
+          info:     'All Fabric links don''t have input error'
+          err:      [ 'Fabric link %s has %s input errors', 'name', 'input-error-list/input-errors' ]
+
+    - iterate:      '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-errors', '0' ]
+          info:     'All Fabric links don''t have output error'
+          err:      [ 'Fabric link %s has %s output errors', 'name', 'output-error-list/output-errors' ]
+
+    ## INPUT / OUTPUT DROPS
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-drops]'
+      tests:
+        - is-equal: [ 'input-error-list/input-drops', '0' ]
+          info:     'All Fabric links don''t have input drops'
+          err:      [ 'Fabric link %s has %s input drops', 'name', 'input-error-list/input-drops' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-drops]'
+      tests:
+        - is_equal: [ 'output-error-list/output-drops', '0' ]
+          info:     'All Fabric links don''t have output drops'
+          err:      [ 'Fabric link %s has %s output drops', 'name', 'output-error-list/output-drops' ]
+
+ 
+    ## INPUT / OUTPUT RESOURCES ERROR 
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-resource-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-resource-errors', '0' ]
+          info:     'All Fabric links don''t have input resource error'
+          err:      [ 'Fabric link %s has %s input resource error', 'name', 'input-error-list/input-resource-errors' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-resource-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-resource-errors', '0' ]
+          info:     'All Fabric links don''t have output resource error'
+          err:      [ 'Fabric link %s has %s output resource error', 'name', 'output-error-list/output-resource-errors' ]
+          
+    ##  Other OUTPUT checks
+    - iterate:  '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/carrier-transitions]'
+      tests:
+        - less-than:    [ 'output-error-list/carrier-transitions', '10' ]
+          info:         'All Fabric links have less than 10 output carrier transition'
+          err:          [ 'Fabric link %s has %s output carrier transitions', 'name', 'output-error-list/carrier-transitions' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-collisions]'
+      tests:
+        - is-equal: [ 'output-error-list/output-collisions', '0' ]
+          info:     'All Fabric links don''t have output collision'
+          err:      [ 'Fabric link %s has %s output carrier transitions', 'name', 'output-error-list/output-collisions' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/mtu-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/mtu-errors', '0' ]
+          info:     'All Fabric links don''t have mtu error'
+          err:      [ 'Fabric link %s has %s output mtu errors', 'name', 'output-error-list/mtu-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/hs-link-crc-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/hs-link-crc-errors', '0' ]
+          info:     'All Fabric links don''t have crc error'
+          err:      [ 'Fabric link %s has %s output crc error', 'name', 'output-error-list/hs-link-crc-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-fifo-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-fifo-errors', '0' ]
+          info:     'All Fabric links don''t have fifo error'
+          err:      [ 'Fabric link %s has %s output fifo errors', 'name', 'output-error-list/output-fifo-errors' ]
+                        
+    ##  Other INPUT checks
+    - iterate:  '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/framing-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/framing-errors', '0' ]
+          info:     'All Fabric links don''t have input framing error'
+          err:      [ 'Fabric link %s has %s input framing errors', 'name', 'input-error-list/framing-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-runts]'
+      tests:
+        - is-equal: [ 'input-error-list/input-runts', '0' ]
+          info:     'All Fabric links don''t have input runts error'
+          err:      [ 'Fabric link %s has %s input runts errors', 'name', 'input-error-list/input-runts' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-discards]'
+      tests:
+        - is-equal: [ 'input-error-list/input-discards', '0' ]
+          info:     'All Fabric links don''t have input discard error'
+          err:      [ 'Fabric link %s has %s input discard errors', 'name', 'input-error-list/input-discards' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l3-incompletes]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l3-incompletes', '0' ]
+          info:     'All Fabric links don''t have input L3 incomplete error'
+          err:      [ 'Fabric link %s has %s input L3 incomplete errors', 'name', 'input-error-list/input-l3-incompletes' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l2-channel-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l2-channel-errors', '0' ]
+          info:     'All Fabric links don''t have input L2 Channel Error'
+          err:      [ 'Fabric link %s has %s input L2 Channel Errors', 'name', 'input-error-list/input-l2-channel-errors' ]
+                        
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l2-mismatch-timeouts]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l2-mismatch-timeouts', '0' ]
+          info:     'All Fabric links don''t haveinput L2 mismatch timeout'
+          err:      [ 'Fabric link %s has %s input L2 mismatch timeout', 'name', 'input-error-list/input-l2-mismatch-timeouts' ]
+               
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-fifo-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-fifo-errors', '0' ]
+          info:     'All Fabric links don''t have input FIFO error'
+          err:      [ 'Fabric link %s has %s input FIFO errors', 'name', 'input-error-list/input-fifo-errors' ]
+
+#
+## All Fabric links with duplex defined are in Full Duplex mode
+## All Fabric links are UP for more than 10 min 
+## Lots of counters check on Fabric interfaces
+# -- ERROR, DROPS, RUNTS, CRC, RESOURCES etc .. 
+check-fte-links-ext:   
+    - command: show interfaces fabric extensive
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and duplex]'
+      tests:
+        - is-equal: [ 'duplex', 'Full-Duplex' ]
+          info:     'All Fabric links with duplex defined are in Full Duplex mode'
+          err:      [ 'Fabric link %s is not in mode %s', 'name', 'duplex' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and interface-flapped and interface-flapped/@seconds != "0"]'
+      tests:
+        - greater-than: [ 'interface-flapped/@seconds', '600' ]
+          info:         'All Fabric links are UP for more than 10 min'
+          err:          [ 'Fabric link %s is Up since %s seconds', 'name', 'interface-flapped/@seconds' ]
+          
+    ## INPUT / OUTPUT ERRORS
+    - iterate:      '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-errors', '0' ]
+          info:     'All Fabric links don''t have input error'
+          err:      [ 'Fabric link %s has %s input errors', 'name', 'input-error-list/input-errors' ]
+
+    - iterate:      '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-errors', '0' ]
+          info:     'All Fabric links don''t have output error'
+          err:      [ 'Fabric link %s has %s output errors', 'name', 'output-error-list/output-errors' ]
+
+    ## INPUT / OUTPUT DROPS
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-drops]'
+      tests:
+        - is-equal: [ 'input-error-list/input-drops', '0' ]
+          info:     'All Fabric links don''t have input drops'
+          err:      [ 'Fabric link %s has %s input drops', 'name', 'input-error-list/input-drops' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-drops]'
+      tests:
+        - is_equal: [ 'output-error-list/output-drops', '0' ]
+          info:     'All Fabric links don''t have output drops'
+          err:      [ 'Fabric link %s has %s output drops', 'name', 'output-error-list/output-drops' ]
+
+ 
+    ## INPUT / OUTPUT RESOURCES ERROR 
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-resource-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-resource-errors', '0' ]
+          info:     'All Fabric links don''t have input resource error'
+          err:      [ 'Fabric link %s has %s input resource error', 'name', 'input-error-list/input-resource-errors' ]
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-resource-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-resource-errors', '0' ]
+          info:     'All Fabric links don''t have output resource error'
+          err:      [ 'Fabric link %s has %s output resource error', 'name', 'output-error-list/output-resource-errors' ]
+          
+    ##  Other OUTPUT checks
+    - iterate:  '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/carrier-transitions]'
+      tests:
+        - less-than:    [ 'output-error-list/carrier-transitions', '10' ]
+          info:         'All Fabric links have less than 10 output carrier transition'
+          err:          [ 'Fabric link %s has %s output carrier transitions', 'name', 'output-error-list/carrier-transitions' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-collisions]'
+      tests:
+        - is-equal: [ 'output-error-list/output-collisions', '0' ]
+          info:     'All Fabric links don''t have output collision'
+          err:      [ 'Fabric link %s has %s output carrier transitions', 'name', 'output-error-list/output-collisions' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/mtu-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/mtu-errors', '0' ]
+          info:     'All Fabric links don''t have mtu error'
+          err:      [ 'Fabric link %s has %s output mtu errors', 'name', 'output-error-list/mtu-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/hs-link-crc-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/hs-link-crc-errors', '0' ]
+          info:     'All Fabric links don''t have crc error'
+          err:      [ 'Fabric link %s has %s output crc error', 'name', 'output-error-list/hs-link-crc-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and output-error-list/output-fifo-errors]'
+      tests:
+        - is-equal: [ 'output-error-list/output-fifo-errors', '0' ]
+          info:     'All Fabric links don''t have fifo error'
+          err:      [ 'Fabric link %s has %s output fifo errors', 'name', 'output-error-list/output-fifo-errors' ]
+                        
+    ##  Other INPUT checks
+    - iterate:  '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/framing-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/framing-errors', '0' ]
+          info:     'All Fabric links don''t have input framing error'
+          err:      [ 'Fabric link %s has %s input framing errors', 'name', 'input-error-list/framing-errors' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-runts]'
+      tests:
+        - is-equal: [ 'input-error-list/input-runts', '0' ]
+          info:     'All Fabric links don''t have input runts error'
+          err:      [ 'Fabric link %s has %s input runts errors', 'name', 'input-error-list/input-runts' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-discards]'
+      tests:
+        - is-equal: [ 'input-error-list/input-discards', '0' ]
+          info:     'All Fabric links don''t have input discard error'
+          err:      [ 'Fabric link %s has %s input discard errors', 'name', 'input-error-list/input-discards' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l3-incompletes]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l3-incompletes', '0' ]
+          info:     'All Fabric links don''t have input L3 incomplete error'
+          err:      [ 'Fabric link %s has %s input L3 incomplete errors', 'name', 'input-error-list/input-l3-incompletes' ]
+          
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l2-channel-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l2-channel-errors', '0' ]
+          info:     'All Fabric links don''t have input L2 Channel Error'
+          err:      [ 'Fabric link %s has %s input L2 Channel Errors', 'name', 'input-error-list/input-l2-channel-errors' ]
+                        
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-l2-mismatch-timeouts]'
+      tests:
+        - is-equal: [ 'input-error-list/input-l2-mismatch-timeouts', '0' ]
+          info:     'All Fabric links don''t haveinput L2 mismatch timeout'
+          err:      [ 'Fabric link %s has %s input L2 mismatch timeout', 'name', 'input-error-list/input-l2-mismatch-timeouts' ]
+               
+    - iterate: '/rpc-reply/interface-information/physical-interface[oper-status="up" and input-error-list/input-fifo-errors]'
+      tests:
+        - is-equal: [ 'input-error-list/input-fifo-errors', '0' ]
+          info:     'All Fabric links don''t have input FIFO error'
+          err:      [ 'Fabric link %s has %s input FIFO errors', 'name', 'input-error-list/input-fifo-errors' ]
+
+

@@ -1,0 +1,88 @@
+## Verify Fabric inventory
+## All node Group connected and configured 
+## All node Devices connected and configured
+check-fabric-inv:
+    - command: show fabric administration inventory detail
+    
+     ## Node Group
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group'
+      tests:
+        - exists:       [ connected ]
+          info:         'All Node Groups are in connected State'
+          err:          ['Node Group %s is not in connected state', 'node-group-name']
+          
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'All Node Groups are in configured State'
+          err:          ['Node Group %s is not in configured state', 'node-group-name', 'configuration']
+          
+        - greater-than: [ 'connection-time/@seconds', 600]
+          info:         'All Node Groups have been connected for more than 10 mins {{minute}}'
+          err:          ['Node Group %s is connected since %s', 'node-group-name', 'connection-time/@seconds']
+ 
+     ## Node Device
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group/node-group-node-devices/node-group-node-device'
+      tests:
+        - exists:       [ connected ]
+          info:         'All Node Devices are in connected State'
+          err:          ['Node Device %s is not in connected state', 'node-device-name']
+          
+        - exists:       [ 'configuration' ]
+          info:         'All Node Devices are in configured State'
+          err:          ['Node Device %s is not in configured state', 'node-device-name', 'configuration']
+          
+        - greater-than: [ 'connection-time/@seconds', 600]
+          info:         'All Node Devices have been connected for more than 10 mins'
+          err:          ['Node Device %s is connected since %s', 'node-device-name', 'connection-time/@seconds']
+ 
+    ## Interconnect
+    - iterate: '/rpc-reply/sfc-inventory/interconnect-devices/interconnect-device'
+      tests:
+        - exists:       [ connected ]
+          info:         'All Interconnects are in connected State'
+          err:          ['Interconnect %s is not in connected state', 'interconnect-device-name']
+          min:          2
+          
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'All Interconnects are in configured State'
+          err:          ['Interconnect %s is in %s state', 'interconnect-device-name', 'configuration']
+          min:          2
+          
+        - greater-than: [ 'connection-time/@seconds', 600 ]
+          info:         'All Interconnects have been connected for more than 10 mins'
+          err:          ['Interconnect %s is connected since %s', 'interconnect-device-name', 'connection-time/@seconds']
+ 
+    ## Fabric Manager
+    - iterate: '/rpc-reply/sfc-inventory/fabric-managers/fabric-manager'
+      tests:
+        - exists:       [ connected ]
+          info:         'Fabric Manager is in connected State'
+          err:          ['Fabric Manager %s is not in connected state', 'fabric-manager-name']
+          
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'Fabric Manager is in configured State'
+          err:          ['Fabric Manager %s is in %s state', 'fabric-manager-name', 'configuration']
+          
+        - greater-than: [ 'connection-time/@seconds', 600 ]
+          info:         'Fabric Manager has been connected for more than 10 mins'
+          err:          ['Fabric Manager %s is connected since %s', 'fabric-manager-name', 'connection-time/@seconds']
+ 
+    ## Fabric Control
+    - iterate: '/rpc-reply/sfc-inventory/fabric-controls/fabric-control'
+      tests:   
+        - exists:       [ connected ]
+          info:         'Both Fabric Control are in connected State'
+          err:          ['Fabric Control %s is not in connected state', 'fabric-control-name']
+          min:          2
+          max:          2
+      
+        - is-equal:     [ 'configuration', 'Configured']
+          info:         'Both Fabric Control are in configured State'
+          err:          ['Fabric Control %s is in %s state', 'fabric-control-name', 'configuration']
+          min:          2
+          max:          2
+          
+        - greater-than: [ 'connection-time/@seconds', 600]
+          info:         'All Fabric Control have been connected for more than 10 mins'
+          err:          ['Fabric Control %s is connected since %s', 'fabric-control-name', 'connection-time/@seconds']
+          min:          2
+          max:          2

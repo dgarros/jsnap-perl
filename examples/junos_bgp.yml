@@ -1,0 +1,31 @@
+
+## Check BGP Peering status on Junos
+# - Verify that all BGP sessions are in Established State
+# - Verify that all BGP sessions in EStablished state are UP for more than 600s
+
+check-bgp-status:
+    - command: show bgp summary
+    
+    - iterate: '/rpc-reply/bgp-information/bgp-peer'
+      tests:
+        - is-equal:     ['peer-state', 'Established']
+          info:         'All BGP peers are in Established State'
+          err:          ['BGP Peer %s (%s) is in %s state', 'peer-address', 'peer-as', 'peer-state']
+ 
+    - iterate: '/rpc-reply/bgp-information/bgp-peer[peer-state="Established"]'     
+      tests:
+        - greater-than: ['elapsed-time/@seconds', 600]
+          info:         'All BGP peers are in UP for more than 10 min'
+          err:          ['BGP Peer %s (%s) is UP since %s sec', 'peer-address', 'peer-as', 'elapsed-time/@seconds']
+
+          
+# <bgp-peer junos:style="terse" heading="Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...">
+    # <peer-address>32.16.0.1</peer-address>
+    # <peer-as>90</peer-as>
+    # <input-messages>0</input-messages>
+    # <output-messages>0</output-messages>
+    # <route-queue-count>0</route-queue-count>
+    # <flap-count>0</flap-count>
+    # <elapsed-time junos:seconds="789">13:09</elapsed-time>
+    # <peer-state>Connect</peer-state>
+# </bgp-peer>

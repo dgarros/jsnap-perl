@@ -1,0 +1,24 @@
+
+## Verify Fabric inventory
+## All node Group connected and configured 
+## All node Devices connected and configured
+check-fabric-inv:
+    - command: show fabric administration inventory detail
+    
+    ## For each Node Group
+    - iterate: '/rpc-reply/sfc-inventory/node-groups/node-group[connected]/node-group-name'
+      with-each:
+        - command: 'show chassis routing-engine node-group %s' 
+        - iterate: '/rpc-reply/route-engine-information/route-engine'
+          tests:      
+            - less-than:    [ 'load-average-one', '0.8' ]
+              info:         'Average CPU for last 1 min is inf at 80%'
+              err:          [ '%s (%s) Average CPU for last 1 min is at %s %', 'slot', 'mastership-state', 'load-average-one' ]
+
+            - less-than:    [ 'load-average-five', '0.7' ]
+              info:         'Average CPU for last 5 min is inf at 70%'
+              err:          [ '%s (%s) Average CPU for last 1 min is at %s %', 'slot', 'mastership-state', 'load-average-five' ]
+              
+            - greater-than: [ 'up-time/@seconds', '600' ]
+              info:         'RE has been Up for more than 10 mins'
+              err:          [ '%s (%s) is UP since %s sec', 'slot', 'mastership-state', 'up-time/@seconds' ]

@@ -1,0 +1,11 @@
+## 
+## Chech for coredumps but exclude files containing "pblogs" or "Install"         
+## 
+check-core:
+    - command: show system core-dumps component all repository core
+    - iterate: '//dre-repository-component-dbgart-entry[ not( contains( dre-repository-component-dbgart-entry-name, "pblogs"))]'
+      tests:      
+        - is-equal: [ dre-repository-component-dbgart-entry-size, 0 ]
+          info:     'No cores found (except pblogs / install)'
+          err:      [ 'Core found generated on : %s for %s', 'dre-repository-component-dbgart-entry-date', 'dre-repository-component-dbgart-entry-name' ]
+          min:      0
