@@ -5,6 +5,7 @@ use strict;
 
 use Try::Tiny;
 use Data::Dumper;
+use File::Basename;
 use Storable;
 use XML::XPath; 
 use XML::XPath::XMLParser; 
@@ -290,8 +291,8 @@ sub element_exists {
     ##      if the number of match is lower than min_res
     ##      if the number of match is higher than max_res
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     
     ## Return True otherwise
     return ( TRUE,  \%results );
@@ -334,23 +335,23 @@ sub not_exists {
     ##      if the number of match is lower than min_res
     ##      if the number of match is higher than max_res
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     
     ## Return True otherwise
     return ( TRUE,  \%results );
 }  
 
 sub is_equal {
-
+		
     my %arg  = ( 
             xml         => undef,   ## mandatory
             iterate_on  => undef,   ## mandatory
             element     => undef,   ## mandatory, XML element to test
             value       => undef,   ## mandatory, XML element value or string to check
             output      => [],      ## optional, String or Array of values to pass as an output if it failed
-            min         => 1,       ## optional, define a minimum number of results expected, will failed if not match
-            max         => undef,   ## optional, define a maximum number of results expected, will failed if exceed
+            min         => 1,       ## optional, define a minimum number of results expected, will fail if no match
+            max         => undef,   ## optional, define a maximum number of results expected, will fail if exceed
             @_ );
 
     die "JSNAP is_equal: Mandatory parameter 'xml' is missing"        if ( not defined $arg{'xml'} );
@@ -366,7 +367,7 @@ sub is_equal {
 
     ## Initiate the structure that will be returned
     my %results = init_result_hash();  
-
+	
     foreach my $item ( $xp->findnodes( $arg{'iterate_on'} ) ) {
         my $temp    = clean_string( $item->findvalue( $arg{'element'} ) );
       
@@ -393,11 +394,10 @@ sub is_equal {
     } 
 
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
-
-    return ( TRUE,  \%results );
-
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
+    
+	return ( TRUE,  \%results );
 } 
 
 sub not_equal {
@@ -452,8 +452,8 @@ sub not_equal {
     } 
 
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
 
     return ( TRUE,  \%results );
 
@@ -500,8 +500,8 @@ sub contains {
     } 
     
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
 
     return ( TRUE,  \%results );
 } 
@@ -549,8 +549,8 @@ sub is_in {
     } 
     
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     
     return ( TRUE,  \%results );
 
@@ -647,8 +647,8 @@ sub in_range {
     } 
 
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
 
     return ( TRUE,  \%results );
 }
@@ -700,8 +700,8 @@ sub not_in_range {
     } 
 
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
 
     return ( TRUE,  \%results );
 
@@ -751,8 +751,8 @@ sub greater_than {
     } 
 
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
 
     return ( TRUE,  \%results );
 } 
@@ -802,8 +802,8 @@ sub less_than {
     } 
 
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     return ( TRUE,  \%results );
 } 
 
@@ -864,8 +864,8 @@ sub all_same {
     }  
            
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     return ( TRUE,  \%results );
 } 
 
@@ -913,8 +913,8 @@ sub same_nbr {
     }  
            
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     return ( TRUE,  \%results );
 } 
 
@@ -981,8 +981,8 @@ sub list_not_less {
         
 	}
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     return ( TRUE,  \%results );
 }
 
@@ -1045,8 +1045,8 @@ my %arg  = (
         
 	}
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
     return ( TRUE,  \%results );
     
 } 
@@ -1128,8 +1128,8 @@ sub no_diff {
     }       
                                
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
 
     return ( TRUE,  \%results );
 }
@@ -1248,8 +1248,8 @@ my %arg  = (
     }       
                                
     return ( FALSE, \%results ) if ( $results{'nbr_failed'} != 0 );
-    return ( FALSE, \%results ) if ( defined $arg{'min'} && $arg{'min'} > $results{'nbr_match'} );
-    return ( FALSE, \%results ) if ( defined $arg{'max'} && $arg{'max'} < $results{'nbr_match'} );
+    return ( FALSE, \%results ) if ( (defined $arg{'min'}) && ( $arg{'min'} > $results{'nbr_match'} ) );
+    return ( FALSE, \%results ) if ( (defined $arg{'max'}) && ( $arg{'max'} < $results{'nbr_match'} ) );
 
     return ( TRUE,  \%results );
 } 
@@ -1346,9 +1346,38 @@ sub get_numeric_part_delta {
 
 sub load_conf_file {
     my $conf_file   = shift;
+    my $deep        = shift; 
+   
+    ## Try if the configuration file exist
+    unless (-e $conf_file) {
+        print "WARN, Unable to access configuration $conf_file, File Doesn't Exist!\n";
+        return {};
+    }
     
-    my $conf = LoadFile( $conf_file );
+    ## Identify location of the file
+    my $dirname = dirname($conf_file);
+    my $conf    = LoadFile( $conf_file );
 
+    ## Keep control of how deep the recursion is for this file
+    # $deep = 1 unless defined $deep; 
+    
+    ## Search for any Import section
+    if( defined $conf->{'import'} ) {
+          
+        foreach my $c ( @{$conf->{'import'}} ) {
+        
+            # die "A loop of Import have been detected" if ( $deep >= 5 );
+            my $import = JSNAP::load_conf_file( $dirname.'/'.$c );
+ 
+            ## Merged imported config into main config
+            my %merged; 
+            %merged = ( %{$conf}, %{$import} ); 
+            $conf   = \%merged;
+        }
+
+        delete $conf->{'import'};
+    }
+    
     return $conf;
 }
 
