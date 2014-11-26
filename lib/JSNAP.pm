@@ -6,6 +6,8 @@ use strict;
 use Try::Tiny;
 use Data::Dumper;
 use File::Basename;
+use JSNAP::Result;
+use JSNAP::Results;
 use Storable;
 use XML::XPath; 
 use XML::XPath::XMLParser; 
@@ -14,42 +16,91 @@ use constant { TRUE => 1, FALSE => 0 };
 
 our $dir    = "$ENV{HOME}/.jsnap";
 
-sub execute {
-    my %arg  = ( 
-                operator    => undef,   
-                msg_success => undef, 
-                msg_failed  => undef, 
-                @_ 
-            );
+# sub execute {
+    # my %arg  = ( 
+                # operator    => undef,   
+                # msg_success => undef, 
+                # msg_failed  => undef, 
+                # @_ 
+            # );
  
-    my $sub     = sub { eval  "$arg{'operator'}( \%arg )" };
-    my ( $pass, $results )    = $sub->();
+    # my $sub     = sub { eval  "$arg{'operator'}( \%arg )" };
+    # my ( $pass, $results )    = $sub->();
     
-    if ( $@ ) {    
-        printf(" \e[0;33m%-5s\e[m | An error occured while executing sub %s \n", 'WARN', "$arg{'operator'} .. ");
-        printf(" \t %s: %s \n", "ERROR MSG", $@);
+    # if ( $@ ) {    
+        # printf(" \e[0;33m%-5s\e[m | An error occured while executing sub %s \n", 'WARN', "$arg{'operator'} .. ");
+        # printf(" \t %s: %s \n", "ERROR MSG", $@);
        
-        return FALSE;
-    }
+        # return FALSE;
+    # }
     
-    if ( $pass ) { printf(" \e[0;32m%-5s\e[m | %s %s \n", 'PASS', $arg{'msg_success'}, "($results->{'nbr_match'} match)" )  }
-    else {
-        printf(" \e[0;31m%-5s\e[m | %s %s \n", 'FAIL', $arg{'msg_success'}, "($results->{'nbr_match'} match / $results->{'nbr_failed'} failed)");
+    # if ( $pass ) { printf(" \e[0;32m%-5s\e[m | %s %s \n", 'PASS', $arg{'msg_success'}, "($results->{'nbr_match'} match)" )  }
+    # else {
+        # printf(" \e[0;31m%-5s\e[m | %s %s \n", 'FAIL', $arg{'msg_success'}, "($results->{'nbr_match'} match / $results->{'nbr_failed'} failed)");
         
-        my @failed_msg_list = build_failed_msg_list( $arg{'msg_failed'}, $results->{'failed'});
+        # my @failed_msg_list = build_failed_msg_list( $arg{'msg_failed'}, $results->{'failed'});
        
-        foreach (@failed_msg_list) {
-            print("\t$_\n");
-        }
-    }
+        # foreach (@failed_msg_list) {
+            # print("\t$_\n");
+        # }
+    # }
 
-    return 1;
-}
+    # return 1;
+# }
 
 #### 
 
+sub execute {
+    my %arg  = (
+                operator    => undef,   
+                msg_success => undef, 
+                msg_failed  => undef,
+                @_ 
+            );
+ 
+    ## Create a pointer to the subroutine that need to be executed
+    my $operator    = $arg{'operator'};
+    undef *operator_sub if defined *operator_sub;
+    *operator_sub   = \&$operator;
+    
+    my ( $pass, $data, $result, $did_failed );
+
+    ## Try to execute the test
+    ## -- If fail, catch the error message and report the test SKIPPED
+    try {
+       ( $pass, $data ) = operator_sub( %arg );
+    }
+    catch {
+        # printf(" \e[0;33m%-5s\e[m | An error occured while executing sub %s \n", 'WARN', "$arg{'operator'} .. ");
+        # printf(" \t %s: %s \n", "ERROR MSG", $_);
+                
+        $result = JSNAP::Result->new(   status  => -1, 
+                                        msg     => $arg{'msg_success'}, 
+                                        data    => { failed_msg => [ "An error occured while executing sub $arg{'operator'} .. ", 
+                                                                     "ERROR MSG: $_"] } 
+                                    );
+        $did_failed = 1;
+    };
+    
+    return $result if ( defined $did_failed );
+      
+    ## if it fail, build errors messags based on input
+    unless ( $pass ) {
+        push @{$data->{failed_msg}}, JSNAP::build_failed_msg_list( $arg{'msg_failed'}, $data->{'failed'});
+    }
+
+    $result = JSNAP::Result->new(   status  => $pass, 
+                                    msg     => $arg{'msg_success'}, 
+                                    data    => $data 
+                                );
+
+    return $result;
+}
+
 sub execute_yml_test {
-    my %arg  = ( test => undef, @_ ); 
+    my %arg  = ( 
+        test => undef, 
+        @_ ); 
           
     ## Re-initialize arguments
     ## Identify the operator
@@ -75,7 +126,7 @@ sub execute_yml_test {
          
         $arg{'operator'} = validate_operator_name( $key );
         
-        if ( not defined $arg{'operator'} ) {
+        unless ( defined $arg{'operator'} ) {
             print "WARN | Operator $key is not valid\n";
             next;
         }
@@ -88,8 +139,8 @@ sub execute_yml_test {
         $arg{'value'}       = \@element_values;
         $arg{'msg_success'} = $arg{'test'}->{info};
         
-        $arg{'min'} = $arg{'test'}->{min} if ( defined $arg{'test'}->{min} );
-        $arg{'min'} = $arg{'test'}->{max} if ( defined $arg{'test'}->{max} );
+        $arg{'min'}         = $arg{'test'}->{min}   if ( defined $arg{'test'}->{min} );
+        $arg{'min'}         = $arg{'test'}->{max}   if ( defined $arg{'test'}->{max} );
 
         $arg{'xml'}         = $arg{'test'}->{xml};
         $arg{'xml2'}        = $arg{'test'}->{xml2};
@@ -115,6 +166,7 @@ sub execute_yml_section_tests {
         xml2            => undef,
         prefix          => undef,
         info            => undef,
+        results         => undef,
         @_ );
              
     foreach my $glo_test ( @{$arg{tests}} ) {
@@ -139,7 +191,7 @@ sub execute_yml_section_tests {
             $test->{err}    = \@tmp_tests;
         }
         
-        JSNAP::execute_yml_test( test => $test );
+        $arg{results}->add_result( JSNAP::execute_yml_test( test => $test ) );
     }
 }
 
@@ -150,6 +202,7 @@ sub execute_yml_section_with_each {
         iterate_on      => undef,
         xml             => undef,
         xml2            => undef,
+        results         => undef,
         @_ );
              
     foreach my $with_each ( @{$arg{with_each}} ) {
@@ -189,6 +242,7 @@ sub execute_yml_section_with_each {
                                                         xml2        => $PRE_xml,
                                                         tests       => $iterate_block->{tests},
                                                         prefix      => $value,
+                                                        results     => $arg{results},
                                                     );
                 }
             }
@@ -202,6 +256,8 @@ sub execute_yml_to_screen {
             conf        => undef,
             @_ );
     
+    my @all_results;
+            
     ## For all Section
     # -- Defined in DO section and with value ea TRUE
     foreach my $section ( keys %{$arg{conf}} ) {
@@ -214,7 +270,7 @@ sub execute_yml_to_screen {
         my $command = JSNAP::find_command_in_section( section => $arg{conf}->{$section} );
 
         ## Pre-store XML results and make sure at least the result for POST is available
-        if ( not defined $arg{snapshot}->{POST}{results}{$command} ) {
+        unless ( defined $arg{snapshot}->{POST}{results}{$command} ) {
             print "ERROR - Command results not available for $arg{snapshot}->{POST}{name} - $command \n"; 
             next; 
         }
@@ -223,6 +279,10 @@ sub execute_yml_to_screen {
         my $POST_xml    = $arg{snapshot}{POST}{results}{$command};
         $PRE_xml        = $arg{snapshot}{POST}{results}{$command} if defined $arg{snapshot}->{PRE}{results}{$command};
 
+        ## Create a Results Object 
+        my $results = JSNAP::Results->new( name => $section );
+        push (@all_results, $results );
+        
         foreach my $iterate_block ( @{$arg{conf}->{$section}} ) {
             
             ## For each iterate block with a tests section
@@ -234,7 +294,9 @@ sub execute_yml_to_screen {
                                                     xml2        => $PRE_xml,
                                                     tests       => $iterate_block->{tests},
                                                     snapshot    => $arg{snapshot},
+                                                    results     => $results,
                                                 );
+                                                
             }
             
             ## For each iterate block with a with-each
@@ -246,9 +308,42 @@ sub execute_yml_to_screen {
                                                         xml2        => $PRE_xml,
                                                         with_each   => $iterate_block->{'with-each'},
                                                         snapshot    => $arg{snapshot},
+                                                        results     => $results,
                                                     );
             }
         }
+    }
+    
+    ## Print Results to Screen once all tests have been executed
+    my $total_match     = 0;
+    my $total_failed    = 0;
+    
+    foreach ( @all_results ) {
+    
+        foreach my $test ( @{$_->{results}} ) {
+            
+            $total_match    += $test->{'nbr_match'}; 
+            $total_failed   += $test->{'nbr_failed'}; 
+           
+            if ( $test->has_passed ) { 
+                printf(" \e[0;32m%-5s\e[m | %s %s \n", 'PASS', $test->{'msg'}, "($test->{'nbr_match'} match)" );
+            }
+            else {
+                printf(" \e[0;31m%-5s\e[m | %s %s \n", 'FAIL', $test->{'msg'}, "($test->{'nbr_match'} match / $test->{'nbr_failed'} failed)");
+                
+                foreach my $msg ( $test->get_failed_msgs ) {
+                    print("\t$msg\n");
+                }
+            }
+        }
+    }
+    
+    ## Print Global statictics
+    if ( $total_failed == 0) {
+         print "\n\e[0;35m Total of $total_match tests executed - none failed \e[m\n";
+    } 
+    else {
+        print "\n\e[0;31m Total of $total_match tests executed - $total_failed failed \e[m\n";
     }
 }
 
