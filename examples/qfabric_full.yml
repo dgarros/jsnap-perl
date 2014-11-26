@@ -1,0 +1,12 @@
+import:
+    - qfabric_director.yml
+    - qfabric_version.yml
+    - qfabric_core.yml
+    - qfabric_fabric_inventory.yml
+    - qfabric_fabric_connectivity.yml
+    - qfabric_node_fpc.yml
+    - qfabric_node_re.yml
+    - junos_alarms.yml
+    - junos_lacp.yml
+    - junos_int_extensive.yml
+    - qfabric_fte_extensive.yml
