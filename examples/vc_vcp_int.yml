@@ -1,0 +1,28 @@
+
+## On a VC or a VCF
+## Check that all VCP links are neither Down nor Absent
+## Check that all VCP links doesn't have errors 
+
+vc-vcports-status:
+    - command: show virtual-chassis vc-port all-members
+    - iterate: '//port-list/port-information'
+      tests: 
+        - not-in:   [ 'port-status', 'Down', 'Absent' ]
+          info:     All VC ports are not Down or Absent
+          err:      [ 'Port %s : %s is in %s state ', '../../../re-name', 'port-name', 'port-status' ]
+
+vc-vcports-statistics:
+    - command:  show virtual-chassis vc-port statistics extensive all-members
+    - iterate:  '//statistics-port-list/statistics'
+      tests: 
+        - is-equal: [ 'crc-align-errors', '0' ]
+          info:     No CRC error detected
+          err:      [ 'Port %s : %s has CRC errors', '../../../re-name', 'port-name' ]
+
+        - is-equal: [ 'packet-drop-event', '0' ]
+          info:     No packet drop event detected
+          err:      [ 'Port %s : %s has packet drop events errors', '../../../re-name', 'port-name' ]
+          
+        - is-equal: [ 'interface-tx-errors', '0' ]
+          info:     No TX error detected
+          err:      [ 'Port %s : %s has TX errors', '../../../re-name', 'port-name' ]

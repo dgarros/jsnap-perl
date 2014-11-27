@@ -1,5 +1,7 @@
 
-
 import:
+    ##- vc_snapshot.yml
+    - vc_vcp_int.yml
+    - vc_member.yml
     - junos_alarms.yml
-    - junos_lacp.yml
+    - junos_storage.yml

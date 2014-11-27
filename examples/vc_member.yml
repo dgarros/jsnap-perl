@@ -1,0 +1,11 @@
+
+## On a Virtual Chassis
+## Make sure all members are in state "Present"
+
+vc-member-status: 
+    - command: show virtual-chassis status
+    - iterate: '//member-list/member' 
+      tests:
+        - is-equal: [ 'member-status', 'Prsnt' ]
+          info:     All VC members are present
+          err:      [ '%s (serial: %s) is not present', 'fpc-slot', 'member-serial-number' ]
