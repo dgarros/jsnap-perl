@@ -63,7 +63,7 @@ if ( scalar @{$opt{snap}} ) {
     die "Only one Snapshot name is needed for --snap" if( scalar @{$opt{snap}} != 1 ); 
     
     ## Setup the SNAPSHOT as remote
-    $snaps{$opt{snap}[0]} = { type => 'REMOTE', results => {} };
+    $snaps{'PRE'} = { name => $opt{snap}[0], type => 'REMOTE', results => {} };
     $need_device_access = 1;
 }
 elsif ( scalar @{$opt{snapcheck}} ) {
@@ -166,10 +166,9 @@ foreach my $key ( keys %snaps ) {
     }
 }
 
-## -- IF type = Remote and if name is defined, saved results to file
+print 1 unless ( defined $action and $action =~ /check/i );
 
-
-print "---\n\n";
+ "---\n\n";
 
 ### Execute Test On Screen
 JSNAP::execute_yml_to_screen( snapshot => \%snaps, conf => $conf );
